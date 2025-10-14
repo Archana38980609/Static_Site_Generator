@@ -4,6 +4,12 @@ from inline_markdown import (
 
     split_nodes_delimiter,
 
+    extract_markdown_images,
+
+    extract_markdown_links,
+
+    
+
 )
 
 
@@ -333,7 +339,256 @@ class TestInlineMarkdown(unittest.TestCase):
 
             result_italic,
 
-        ) 
+        )
+
+
+    def test_extract_markdown_images(self):
+
+        matches = extract_markdown_images(
+
+            "This is text with an ![image](https://i.imgur.com/zjjcJKZ.png)"
+
+        )
+
+        self.assertListEqual([("image", "https://i.imgur.com/zjjcJKZ.png")], matches)
+
+
+    def test_extract_markdown_links(self):
+
+        matches = extract_markdown_links(
+
+            "This is text with a [link](https://www.google.com) and [another link](https://www.youtube.com)"
+
+        )
+
+        self.assertListEqual(
+
+            [
+
+                ("link", "https://www.google.com"),
+
+                ("another link", "https://www.youtube.com"),
+
+            ],
+
+            matches,
+
+        )
+
+
+    def test_extract_no_images_or_links(self):
+
+        text_without_markdown = "This is a plain sentence with no images or links."
+
+        
+
+        images = extract_markdown_images(text_without_markdown)
+
+        self.assertListEqual([], images) 
+
+
+        links = extract_markdown_links(text_without_markdown)
+
+        self.assertListEqual([], links) 
+
+
+    def test_extract_empty_string_input(self):
+
+        images = extract_markdown_images("")
+
+        self.assertListEqual([], images) 
+
+
+        links = extract_markdown_links("")
+
+        self.assertListEqual([], links) 
+
+
+    def test_extract_images_empty_alt_text(self):
+
+        images = extract_markdown_images("Text with an ![alt](https://example.com/image.jpg) and ![ ](url.png)")
+
+        self.assertListEqual(
+
+            [
+
+                ("alt", "https://example.com/image.jpg"),
+
+                (" ", "url.png") 
+
+            ], 
+
+            images
+
+        )
+
+    
+
+        images_truly_empty_alt = extract_markdown_images("Text with truly ![](image.gif)")
+
+        self.assertListEqual([("", "image.gif")], images_truly_empty_alt)
+
+
+    def test_extract_images_empty_url(self):
+
+        images = extract_markdown_images("Text with an ![image title]() and another ![pic]( )")
+
+        self.assertListEqual(
+
+            [
+
+                ("image title", ""),
+
+                ("pic", " ") 
+
+            ], 
+
+            images
+
+        )
+
+        images_truly_empty_url = extract_markdown_images("Text with ![invalid]().")
+
+        self.assertListEqual([("invalid", "")], images_truly_empty_url)
+
+
+    def test_extract_links_empty_anchor_text(self):
+
+        links = extract_markdown_links("Visit [link](http://example.com) and [ ](http://empty.com)")
+
+        self.assertListEqual(
+
+            [
+
+                ("link", "http://example.com"),
+
+                (" ", "http://empty.com") 
+
+            ], 
+
+            links
+
+        )
+
+        links_truly_empty_anchor = extract_markdown_links("Click here [](http://test.com)")
+
+        self.assertListEqual([("", "http://test.com")], links_truly_empty_anchor)
+
+
+    def test_extract_links_empty_url(self):
+
+        links = extract_markdown_links("Go to [website]() or [here]( )")
+
+        self.assertListEqual(
+
+            [
+
+                ("website", ""),
+
+                ("here", " ") 
+
+            ], 
+
+            links
+
+        )
+
+        links_truly_empty_url = extract_markdown_links("Broken [link]().")
+
+        self.assertListEqual([("link", "")], links_truly_empty_url)
+
+
+    def test_extract_mixed_empty_cases(self):
+
+        text = "![img]() [link]() ![](/path) [](/another)"
+
+        images = extract_markdown_images(text)
+
+        links = extract_markdown_links(text)
+
+
+        self.assertListEqual([("img", ""), ("", "/path")], images)
+
+        self.assertListEqual([("link", ""), ("", "/another")], links)
+
+
+    def test_extract_markdown_images_malformed(self):
+
+        text = "This is ![an image( with a malformed url"
+
+        matches = extract_markdown_images(text)
+
+        self.assertListEqual([], matches)
+
+
+        text = "This is ![an image with a malformed alt text]"
+
+        matches = extract_markdown_images(text)
+
+        self.assertListEqual([], matches)
+
+
+        text = "This is ![an image](url without closing parenthesis"
+
+        matches = extract_markdown_images(text)
+
+        self.assertListEqual([], matches)
+
+
+    def test_extract_markdown_links_malformed(self):
+
+        text = "This is [a link( with a malformed url"
+
+        matches = extract_markdown_links(text)
+
+        self.assertListEqual([], matches)
+
+
+        text = "This is [a link with a malformed alt text]"
+
+        matches = extract_markdown_links(text)
+
+        self.assertListEqual([], matches)
+
+
+        text = "This is [a link](url without closing parenthesis"
+
+        matches = extract_markdown_links(text)
+
+        self.assertListEqual([], matches)
+
+
+    def test_extract_markdown_images_with_internal_brackets_parentheses_not_parsed(self):
+
+        text_image_alt_brackets = "![image with [brackets]](https://example.com/image.jpg)"
+
+        matches_image_alt_brackets = extract_markdown_images(text_image_alt_brackets)
+
+        self.assertListEqual([], matches_image_alt_brackets) 
+
+
+        text_image_url_parentheses = "![image](https://example.com/url(with).jpg)"
+
+        matches_image_url_parentheses = extract_markdown_images(text_image_url_parentheses)
+
+        self.assertListEqual([], matches_image_url_parentheses) 
+
+
+    def test_extract_markdown_links_with_internal_brackets_parentheses_not_parsed(self):
+
+        text_link_alt_brackets = "[link with [brackets]](https://example.com/link)"
+
+        matches_link_alt_brackets = extract_markdown_links(text_link_alt_brackets)
+
+        self.assertListEqual([], matches_link_alt_brackets) 
+
+
+        text_link_url_parentheses = "[link](https://example.com/path(to)resource)"
+
+        matches_link_url_parentheses = extract_markdown_links(text_link_url_parentheses)
+
+        self.assertListEqual([], matches_link_url_parentheses) 
+
 
 if __name__ == "__main__":
 
