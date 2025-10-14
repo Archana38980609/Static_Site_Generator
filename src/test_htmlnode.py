@@ -2,6 +2,8 @@ import unittest
 
 from htmlnode import HTMLNode
 
+from htmlnode import LeafNode 
+
 class TestHTMLNode(unittest.TestCase):
 
     def test_props_to_html(self):
@@ -161,6 +163,52 @@ class TestHTMLNode(unittest.TestCase):
             "HTMLNode(p, What a beautiful city, children: None, {'class': 'primary'})",
 
         ) 
+
+
+
+    def test_leaf_to_html_p(self):
+
+        node = LeafNode("p", "Hello, world!")
+
+        self.assertEqual(node.to_html(), "<p>Hello, world!</p>")
+
+
+    def test_leaf_to_html_no_tag_p(self):
+
+        node = LeafNode(None, "Hello, world!")
+
+        self.assertEqual(node.to_html(), "Hello, world!")
+
+
+    def test_leaf_to_html_no_value_p(self):
+
+        node = LeafNode("p", None)
+
+        with self.assertRaises(ValueError):
+
+            node.to_html()
+
+
+    def test_leaf_repr_p(self):
+
+        node = LeafNode("p", "Hello, world!")
+
+        self.assertEqual(node.__repr__(), 'LeafNode(p, Hello, world!, None)')
+
+
+    def test_leaf_to_html_a_with_props(self):
+
+        node = LeafNode("a", "Click me!", {"href": "https://www.google.com"})
+
+        self.assertEqual(node.to_html(), '<a href="https://www.google.com">Click me!</a>')
+
+
+    def test_leaf_to_html_a_with_props(self):
+
+        node = LeafNode("a", "Click me!", {"class": "greeting", "href": "https://www.youtube.com"})
+
+        self.assertEqual(node.to_html(), '<a class="greeting" href="https://www.youtube.com">Click me!</a>')
+
 
 if __name__ == "__main__":
 
