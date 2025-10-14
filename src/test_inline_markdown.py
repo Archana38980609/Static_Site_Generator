@@ -5,6 +5,7 @@ from inline_markdown import (
     split_nodes_delimiter,
     split_nodes_image,
     split_nodes_link,
+    text_to_textnodes,
     extract_markdown_images,
     extract_markdown_links, 
 
@@ -1331,6 +1332,419 @@ class TestInlineMarkdown(unittest.TestCase):
             new_nodes,
 
         )  
+
+
+
+
+    def test_text_to_textnodes(self):
+
+        nodes = text_to_textnodes(
+
+            "This is **text** with an _italic_ word and a `code block` and an ![image](https://i.imgur.com/zjjcJKZ.png) and a [link](https://www.google.com)"
+
+        )
+
+        self.assertListEqual(
+
+            [
+
+                TextNode("This is ", TextType.TEXT),
+
+                TextNode("text", TextType.BOLD),
+
+                TextNode(" with an ", TextType.TEXT),
+
+                TextNode("italic", TextType.ITALIC),
+
+                TextNode(" word and a ", TextType.TEXT),
+
+                TextNode("code block", TextType.CODE),
+
+                TextNode(" and an ", TextType.TEXT),
+
+                TextNode("image", TextType.IMAGE, "https://i.imgur.com/zjjcJKZ.png"),
+
+                TextNode(" and a ", TextType.TEXT),
+
+                TextNode("link", TextType.LINK, "https://www.google.com"),
+
+            ],
+
+            nodes,
+
+        )  
+
+
+    def test_plain_text_no_formatting(self):
+
+        nodes = text_to_textnodes("No formatting here.")
+
+        expected_nodes = [
+
+            TextNode("No formatting here.", TextType.TEXT)
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_empty_string(self):
+
+        nodes = text_to_textnodes("")
+
+        expected_nodes = []
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_consecutive_bold(self):
+
+        nodes = text_to_textnodes("**one****two**")
+
+        expected_nodes = [
+
+            TextNode("one", TextType.BOLD),
+
+            TextNode("two", TextType.BOLD)
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_consecutive_italic(self):
+
+        nodes = text_to_textnodes("_first__second_")
+
+        expected_nodes = [
+
+            TextNode("first", TextType.ITALIC),
+
+            TextNode("second", TextType.ITALIC)
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_consecutive_code(self):
+
+        nodes = text_to_textnodes("`code1``code2`")
+
+        expected_nodes = [
+
+            TextNode("code1", TextType.CODE),
+
+            TextNode("code2", TextType.CODE)
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_markdown_at_start(self):
+
+        nodes = text_to_textnodes("**start** text")
+
+        expected_nodes = [
+
+            TextNode("start", TextType.BOLD),
+
+            TextNode(" text", TextType.TEXT)
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_markdown_at_end(self):
+
+        nodes = text_to_textnodes("Text **end**")
+
+        expected_nodes = [
+
+            TextNode("Text ", TextType.TEXT),
+
+            TextNode("end", TextType.BOLD)
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_markdown_only_string(self):
+
+        nodes = text_to_textnodes("_Just Italic_")
+
+        expected_nodes = [
+
+            TextNode("Just Italic", TextType.ITALIC)
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_escaped_bold_as_literal(self):
+
+        nodes = text_to_textnodes("\\*\\*not bold\\*\\*")
+
+        expected_nodes = [
+
+            TextNode("\\*\\*not bold\\*\\*", TextType.TEXT)  
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_escaped_italic_as_literal(self):
+
+        nodes = text_to_textnodes("\\_not italic\\_")
+
+        expected_nodes = [
+
+            TextNode("\\", TextType.TEXT),           
+
+            TextNode("not italic\\", TextType.ITALIC),  
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_escaped_code_as_literal(self):
+
+        nodes = text_to_textnodes("\\`not code\\`")
+
+        expected_nodes = [
+
+            TextNode("\\", TextType.TEXT),        
+
+            TextNode("not code\\", TextType.CODE), 
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_nested_bold_inside_italic(self):
+
+        text = "_italic **bold inside italic** italic_"
+
+        nodes = text_to_textnodes(text)
+
+        expected_nodes = [
+
+            TextNode("italic **bold inside italic** italic", TextType.ITALIC),
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_mixed_formats_multiple_types(self):
+
+        text = "Mix of **bold**, `code`, and _italic_ in one go!"
+
+        nodes = text_to_textnodes(text)
+
+        expected_nodes = [
+
+            TextNode("Mix of ", TextType.TEXT),
+
+            TextNode("bold", TextType.BOLD),
+
+            TextNode(", ", TextType.TEXT),
+
+            TextNode("code", TextType.CODE),
+
+            TextNode(", and ", TextType.TEXT),
+
+            TextNode("italic", TextType.ITALIC),
+
+            TextNode(" in one go!", TextType.TEXT)
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_repeated_formats_throughout_string(self):
+
+        text = "**First** then _second_ then `third` and **fourth**."
+
+        nodes = text_to_textnodes(text)
+
+        expected_nodes = [
+
+            TextNode("First", TextType.BOLD),
+
+            TextNode(" then ", TextType.TEXT),
+
+            TextNode("second", TextType.ITALIC),
+
+            TextNode(" then ", TextType.TEXT),
+
+            TextNode("third", TextType.CODE),
+
+            TextNode(" and ", TextType.TEXT),
+
+            TextNode("fourth", TextType.BOLD),
+
+            TextNode(".", TextType.TEXT)
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_image_empty_alt_text(self):
+
+        nodes = text_to_textnodes("An image: ![ ](https://example.com/empty.png)")
+
+        expected_nodes = [
+
+            TextNode("An image: ", TextType.TEXT),
+
+            TextNode(" ", TextType.IMAGE, "https://example.com/empty.png")
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_link_empty_text(self):
+
+        nodes = text_to_textnodes("A link: [](https://example.com/empty_link)")
+
+        expected_nodes = [
+
+            TextNode("A link: ", TextType.TEXT),
+
+            TextNode("", TextType.LINK, "https://example.com/empty_link")
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_image_at_start_of_string_with_text(self):
+
+        nodes = text_to_textnodes("![start_image](https://www.youtube.com/start.png) This starts with an image.")
+
+        expected_nodes = [
+
+            TextNode("start_image", TextType.IMAGE, "https://www.youtube.com/start.png"),
+
+            TextNode(" This starts with an image.", TextType.TEXT)
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_link_at_end_of_string_with_text(self):
+
+        nodes = text_to_textnodes("This ends with a [final link](https://www.google.com/final).")
+
+        expected_nodes = [
+
+            TextNode("This ends with a ", TextType.TEXT),
+
+            TextNode("final link", TextType.LINK, "https://www.google.com/final"),
+
+            TextNode(".", TextType.TEXT)
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_interspersed_images_and_links(self):
+
+        text = "Here's ![img1](url1) then [link1](urlA) and another ![img2](url2) before [link2](urlB)."
+
+        nodes = text_to_textnodes(text)
+
+        expected_nodes = [
+
+            TextNode("Here's ", TextType.TEXT),
+
+            TextNode("img1", TextType.IMAGE, "url1"),
+
+            TextNode(" then ", TextType.TEXT),
+
+            TextNode("link1", TextType.LINK, "urlA"),
+
+            TextNode(" and another ", TextType.TEXT),
+
+            TextNode("img2", TextType.IMAGE, "url2"),
+
+            TextNode(" before ", TextType.TEXT),
+
+            TextNode("link2", TextType.LINK, "urlB"),
+
+            TextNode(".", TextType.TEXT),
+
+        ]
+
+        self.assertListEqual(nodes, expected_nodes)
+
+
+    def test_unclosed_bold_raises_error(self):
+
+        text = "This is **unclosed bold"
+
+        with self.assertRaises(ValueError) as cm:
+
+            text_to_textnodes(text)
+
+        self.assertIn("invalid markdown, formatted section not closed", str(cm.exception))
+
+
+    def test_unclosed_italic_raises_error(self):
+
+        text = "This is _unclosed Italic"
+
+        with self.assertRaises(ValueError) as cm:
+
+            text_to_textnodes(text)
+
+        self.assertIn("invalid markdown, formatted section not closed", str(cm.exception))
+
+
+    def test_unclosed_code_raises_error(self):
+
+        text = "This is `unclosed code"
+
+        with self.assertRaises(ValueError) as cm:
+
+            text_to_textnodes(text)
+
+        self.assertIn("invalid markdown, formatted section not closed", str(cm.exception))
+
+
+    def test_unclosed_image_raises_error(self):
+
+        text = "An image ![missing_bracket](url.png"
+
+        with self.assertRaises(ValueError) as cm:
+
+            text_to_textnodes(text)
+
+        self.assertIn("invalid markdown, image section not closed", str(cm.exception))
+
+
+    def test_unclosed_link_raises_error(self):
+
+        text = "A link [missing_paren](url.com"
+
+        with self.assertRaises(ValueError) as cm:
+
+            text_to_textnodes(text)
+
+        self.assertIn("invalid markdown, link section not closed", str(cm.exception)) 
 
 
 
